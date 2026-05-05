@@ -96,6 +96,8 @@ require("go_mono_repo").setup({
   },
 
   keymaps = {
+    -- Alias for pick_entrypoint; useful if you prefer naming this by the scope action.
+    pick_scope = nil,
     pick_entrypoint = "<leader>ge",
     clear_scope = "<leader>gE",
     files = "<leader>gf",
@@ -116,6 +118,8 @@ require("go_mono_repo").setup({
   debug = false,
 })
 ```
+
+For example, set `keymaps.pick_scope = "<leader>ngl"` to open the scope picker with `<leader>ngl`.
 
 ## Override Keymaps
 

@@ -95,6 +95,7 @@ function M.setup(opts)
 	scope.setup_autocmds()
 
 	local km = config.options.keymaps or {}
+	map(km.pick_scope, M.pick_entrypoint, "Pick Go scope")
 	map(km.pick_entrypoint, M.pick_entrypoint, "Pick Go entrypoint")
 	map(km.clear_scope, M.clear_scope, "Clear Go scope")
 	map(km.files, M.files, "Go scoped files")

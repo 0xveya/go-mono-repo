@@ -20,6 +20,10 @@ local function item_text(item)
 	return item.text or item.label or item.entry or item.file or tostring(item)
 end
 
+local function snacks_format_text(item)
+	return { { item_text(item), field = "text" } }
+end
+
 function M.select_entry(entries, cb)
 	vim.ui.select(entries, {
 		prompt = "Go entrypoint",
@@ -54,9 +58,7 @@ function M.files(scope)
 			and snacks_pick({
 				title = "Go scope files",
 				items = items,
-				format = function(item)
-					return item.text
-				end,
+				format = snacks_format_text,
 				confirm = function(picker, item)
 					if picker and picker.close then
 						picker:close()
@@ -200,9 +202,7 @@ function M.handlers(items)
 			and snacks_pick({
 				title = "Go route handlers",
 				items = items,
-				format = function(item)
-					return item.text
-				end,
+				format = snacks_format_text,
 				confirm = function(p, item)
 					if p and p.close then
 						p:close()

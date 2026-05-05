@@ -15,6 +15,7 @@ M.defaults = {
 	},
 
 	keymaps = {
+		pick_scope = nil,
 		pick_entrypoint = "<leader>ge",
 		clear_scope = "<leader>gE",
 		files = "<leader>gf",
