@@ -86,6 +86,20 @@ function M.select_entry(entries, cb)
 	}, cb)
 end
 
+local function snacks_pick(opts)
+	local snacks = has("snacks")
+	if snacks and snacks.picker and snacks.picker.pick then
+		snacks.picker.pick(opts)
+		return true
+	end
+	local picker = has("snacks.picker")
+	if picker and picker.pick then
+		picker.pick(opts)
+		return true
+	end
+	return false
+end
+
 function M.select_narrow(items, cb)
 	local function apply(item)
 		if item then
@@ -163,20 +177,6 @@ function M.select_narrow(items, cb)
 			return item.text or item.label
 		end,
 	}, apply)
-end
-
-local function snacks_pick(opts)
-	local snacks = has("snacks")
-	if snacks and snacks.picker and snacks.picker.pick then
-		snacks.picker.pick(opts)
-		return true
-	end
-	local picker = has("snacks.picker")
-	if picker and picker.pick then
-		picker.pick(opts)
-		return true
-	end
-	return false
 end
 
 function M.files(scope)
