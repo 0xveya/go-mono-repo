@@ -33,6 +33,8 @@ local gomono = require("go_mono_repo")
 
 gomono.setup(opts)
 gomono.pick_entrypoint()
+gomono.narrow_scope()
+gomono.clear_narrow()
 gomono.clear_scope()
 gomono.refresh_scope()
 gomono.files()
@@ -56,6 +58,8 @@ It returns `go:all` when no entrypoint is selected, or values such as `go:api`, 
 | Command | Behavior |
 | --- | --- |
 | `:GoMonoPick` | Discover `cmd/*`, pick an entrypoint, compute scope |
+| `:GoMonoNarrow` | Narrow the current entrypoint scope to a discovered command group |
+| `:GoMonoClearNarrow` | Clear the command-group narrow filter |
 | `:GoMonoClear` | Reset current repo to unscoped mode |
 | `:GoMonoRefresh` | Recompute the selected entrypoint scope |
 | `:GoMonoFiles` | Scoped file picker |
@@ -70,6 +74,8 @@ Default keymaps:
 ```lua
 {
   pick_entrypoint = "<leader>ge",
+  narrow = nil,
+  clear_narrow = nil,
   clear_scope = "<leader>gE",
   files = "<leader>gf",
   grep = "<leader>gg",
@@ -99,6 +105,8 @@ require("go_mono_repo").setup({
     -- Alias for pick_entrypoint; useful if you prefer naming this by the scope action.
     pick_scope = nil,
     pick_entrypoint = "<leader>ge",
+    narrow = nil,
+    clear_narrow = nil,
     clear_scope = "<leader>gE",
     files = "<leader>gf",
     grep = "<leader>gg",
@@ -120,6 +128,8 @@ require("go_mono_repo").setup({
 ```
 
 For example, set `keymaps.pick_scope = "<leader>ngl"` to open the scope picker with `<leader>ngl`.
+
+Set `keymaps.narrow` to open a second-level picker for narrowing the current entrypoint scope. For example, after selecting a CLI entrypoint, `:GoMonoNarrow` can discover Cobra command groups such as `auth`, `project`, or an alias like `ctl -> cluster-control`. Scoped files, grep, symbols, and handlers then use the narrowed file set until you run `:GoMonoClearNarrow`.
 
 ## Override Keymaps
 

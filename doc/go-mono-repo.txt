@@ -59,6 +59,8 @@ Full setup: >
     keymaps = {
       pick_scope = nil,
       pick_entrypoint = "<leader>ge",
+      narrow = nil,
+      clear_narrow = nil,
       clear_scope = "<leader>gE",
       files = "<leader>gf",
       grep = "<leader>gg",
@@ -87,6 +89,13 @@ COMMANDS                                      *go-mono-repo-commands*
 
                                                         *:GoMonoPick*
 :GoMonoPick          Discover cmd/*, pick an entrypoint, compute scope.
+
+                                                        *:GoMonoNarrow*
+:GoMonoNarrow        Narrow the current entrypoint scope to a discovered
+                     command group, such as a Cobra command group.
+
+                                                        *:GoMonoClearNarrow*
+:GoMonoClearNarrow   Clear the command-group narrow filter.
 
                                                         *:GoMonoClear*
 :GoMonoClear         Reset current repo to unscoped mode.
@@ -122,6 +131,8 @@ Default keymaps: >
 
   {
     pick_entrypoint = "<leader>ge",
+    narrow = nil,
+    clear_narrow = nil,
     clear_scope = "<leader>gE",
     files = "<leader>gf",
     grep = "<leader>gg",
@@ -142,6 +153,11 @@ Set keymaps.pick_scope to add an alias for the entrypoint scope picker: >
 When override.enabled is true, configured override keys call scoped commands
 while a scope exists and fall back to normal picker behavior while unscoped.
 
+GoMonoNarrow opens a second-level picker for the active entrypoint. The first
+detector finds Cobra command groups and narrows the file set to the group
+constructor and local packages imported by that group. Status strings include
+the narrow label, for example "go:cli/auth" or "go:cli/ctl".
+
 ==============================================================================
 API                                           *go-mono-repo-api*
 
@@ -151,6 +167,8 @@ Lua API: >
 
   gomono.setup(opts)
   gomono.pick_entrypoint()
+  gomono.narrow_scope()
+  gomono.clear_narrow()
   gomono.clear_scope()
   gomono.refresh_scope()
   gomono.files()

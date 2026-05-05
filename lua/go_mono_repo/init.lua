@@ -2,6 +2,7 @@ local config = require("go_mono_repo.config")
 local go = require("go_mono_repo.go")
 local handlers = require("go_mono_repo.handlers")
 local lsp = require("go_mono_repo.lsp")
+local narrow = require("go_mono_repo.narrow")
 local picker = require("go_mono_repo.picker")
 local scope = require("go_mono_repo.scope")
 local state = require("go_mono_repo.state")
@@ -60,6 +61,8 @@ end
 
 local function setup_commands()
 	vim.api.nvim_create_user_command("GoMonoPick", M.pick_entrypoint, { force = true })
+	vim.api.nvim_create_user_command("GoMonoNarrow", M.narrow_scope, { force = true })
+	vim.api.nvim_create_user_command("GoMonoClearNarrow", M.clear_narrow, { force = true })
 	vim.api.nvim_create_user_command("GoMonoClear", M.clear_scope, { force = true })
 	vim.api.nvim_create_user_command("GoMonoRefresh", M.refresh_scope, { force = true })
 	vim.api.nvim_create_user_command("GoMonoFiles", M.files, { force = true })
@@ -73,8 +76,9 @@ local function setup_commands()
 			return
 		end
 		notify(
-			("Go scope: %s\nroot: %s\npackages: %d\nfiles: %d\ngenerated hidden: %d"):format(
+			("Go scope: %s%s\nroot: %s\npackages: %d\nfiles: %d\ngenerated hidden: %d"):format(
 				current.label,
+				current.narrow and ("/" .. (current.narrow.status or current.narrow.label)) or "",
 				current.root,
 				#(current.packages or {}),
 				#(current.files or {}),
@@ -97,6 +101,8 @@ function M.setup(opts)
 	local km = config.options.keymaps or {}
 	map(km.pick_scope, M.pick_entrypoint, "Pick Go scope")
 	map(km.pick_entrypoint, M.pick_entrypoint, "Pick Go entrypoint")
+	map(km.narrow, M.narrow_scope, "Narrow Go scope")
+	map(km.clear_narrow, M.clear_narrow, "Clear Go narrow scope")
 	map(km.clear_scope, M.clear_scope, "Clear Go scope")
 	map(km.files, M.files, "Go scoped files")
 	map(km.grep, M.grep, "Go scoped grep")
@@ -130,6 +136,40 @@ function M.pick_entrypoint()
 			notify(("Go scope: %s, %d packages, %d files"):format(current.label, #current.packages, #current.files))
 		end
 	end)
+end
+
+function M.narrow_scope()
+	local current, err = scope.ensure()
+	if not current then
+		notify(err .. "; run :GoMonoPick", vim.log.levels.WARN)
+		return
+	end
+	local items = narrow.discover(current)
+	if #items == 0 then
+		notify("No narrow scopes found", vim.log.levels.WARN)
+		return
+	end
+	picker.select_narrow(items, function(item)
+		if not item then
+			return
+		end
+		narrow.apply(current, item)
+		notify(("Go scope: %s/%s, %d files"):format(current.label, item.status or item.label, #(current.files or {})))
+	end)
+end
+
+function M.clear_narrow()
+	local current, err = scope.ensure()
+	if not current then
+		notify(err .. "; run :GoMonoPick", vim.log.levels.WARN)
+		return
+	end
+	if not current.narrow then
+		notify("No Go narrow scope selected")
+		return
+	end
+	narrow.clear(current)
+	notify(("Go scope: %s, %d files"):format(current.label, #(current.files or {})))
 end
 
 function M.clear_scope()

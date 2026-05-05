@@ -76,6 +76,15 @@ function M.select_entry(entries, cb)
 	}, cb)
 end
 
+function M.select_narrow(items, cb)
+	vim.ui.select(items, {
+		prompt = "Go narrow scope",
+		format_item = function(item)
+			return item.text or item.label
+		end,
+	}, cb)
+end
+
 local function snacks_pick(opts)
 	local snacks = has("snacks")
 	if snacks and snacks.picker and snacks.picker.pick then

@@ -7,7 +7,11 @@ function M.status()
 	if not current then
 		return "go:all"
 	end
-	return "go:" .. (current.label or vim.fs.basename(current.entry))
+	local label = current.label or vim.fs.basename(current.entry)
+	if current.narrow and current.narrow.label then
+		label = label .. "/" .. (current.narrow.status or current.narrow.label)
+	end
+	return "go:" .. label
 end
 
 return M

@@ -52,6 +52,7 @@ function M.persist_selection(root, selection)
 		data[root] = {
 			entry = selection.entry,
 			label = selection.label,
+			narrow = selection.narrow,
 			updated_at = selection.updated_at or os.time(),
 		}
 	else

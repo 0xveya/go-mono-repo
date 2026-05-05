@@ -1,7 +1,9 @@
 :GoMonoClear	go-mono-repo.txt	/*:GoMonoClear*
+:GoMonoClearNarrow	go-mono-repo.txt	/*:GoMonoClearNarrow*
 :GoMonoFiles	go-mono-repo.txt	/*:GoMonoFiles*
 :GoMonoGrep	go-mono-repo.txt	/*:GoMonoGrep*
 :GoMonoHandlers	go-mono-repo.txt	/*:GoMonoHandlers*
+:GoMonoNarrow	go-mono-repo.txt	/*:GoMonoNarrow*
 :GoMonoPick	go-mono-repo.txt	/*:GoMonoPick*
 :GoMonoRefresh	go-mono-repo.txt	/*:GoMonoRefresh*
 :GoMonoStatus	go-mono-repo.txt	/*:GoMonoStatus*

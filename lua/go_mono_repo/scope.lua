@@ -45,6 +45,7 @@ function M.restore(root)
 		root = root,
 		entry = saved.entry,
 		label = saved.label or entry.label,
+		narrow = saved.narrow,
 		updated_at = saved.updated_at,
 	}
 	return state.selected[root]
@@ -87,7 +88,17 @@ function M.compute(root, entry, opts)
 	if discovered then
 		scope.label = discovered.label
 	end
+	scope.all_files = vim.deepcopy(scope.files)
 	M.set(scope)
+	if previous and previous.narrow then
+		local narrow = require("go_mono_repo.narrow")
+		for _, item in ipairs(narrow.discover(scope)) do
+			if item.constructor == previous.narrow.constructor and item.file == previous.narrow.file then
+				narrow.apply(scope, item)
+				break
+			end
+		end
+	end
 	return scope
 end
 
