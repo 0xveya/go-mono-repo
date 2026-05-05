@@ -162,7 +162,7 @@ Lua API: >
 <
 
 status() returns "go:all" when no entrypoint is selected, or values such as
-"go:master" and "go:file-store".
+"go:api" and "go:worker".
 
 ==============================================================================
 ROUTER HANDLERS                               *go-mono-repo-handlers*
@@ -172,7 +172,7 @@ module when unscoped. It recognizes common Chi registrations such as: >
 
   r.Route("/api/v1", func(r chi.Router) {
     r.Get("/healthz", commonhandlers.HandleHealthz)
-    r.Post("/jobs/{job_name}/run", master.RunJob)
+    r.Post("/jobs/{job_name}/run", api.RunJob)
   })
 <
 
@@ -188,9 +188,9 @@ Root detection starts from the current buffer and looks for go.work, go.mod, or
 .git. A go.mod file is required, and the module path is read from it.
 
 Entrypoints are immediate directories under cmd that contain at least one Go
-file. Selecting cmd/master runs: >
+file. Selecting cmd/api runs: >
 
-  go list -deps -json ./cmd/master
+  go list -deps -json ./cmd/api
 <
 
 The plugin keeps packages where pkg.Module.Path equals the current module path.

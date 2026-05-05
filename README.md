@@ -2,7 +2,7 @@
 
 `go-mono-repo.nvim` scopes editor navigation to the Go packages reachable from one selected `cmd/*` entrypoint in a monorepo.
 
-In a repo such as `gns3util`, selecting `cmd/master` means file search, grep, and workspace symbols stay focused on packages imported by the master service. `cmd/file-store` and Cobra CLI files stay out of the way until you select those entrypoints.
+In a repo with multiple Go binaries, selecting `cmd/api` means file search, grep, workspace symbols, and route handlers stay focused on packages imported by the API service. Other entrypoints, such as `cmd/worker` or `cmd/cli`, stay out of the way until you select them.
 
 ## Install
 
@@ -49,7 +49,7 @@ Statusline integration is plugin-agnostic:
 require("go_mono_repo").status()
 ```
 
-It returns `go:all` when no entrypoint is selected, or values such as `go:master`, `go:file-store`, and `go:gns3util`.
+It returns `go:all` when no entrypoint is selected, or values such as `go:api`, `go:worker`, and `go:cli`.
 
 ## Commands
 
@@ -144,7 +144,7 @@ If no entrypoint is selected, the keys fall back to normal picker behavior where
 ```go
 r.Route("/api/v1", func(r chi.Router) {
   r.Get("/healthz", commonhandlers.HandleHealthz)
-  r.Post("/jobs/{job_name}/run", master.RunJob)
+  r.Post("/jobs/{job_name}/run", api.RunJob)
 })
 ```
 
@@ -154,10 +154,10 @@ Picker rows include the HTTP method, joined route path, handler expression, and 
 
 Root detection starts from the current buffer, uses `vim.fs.root()` when available, and falls back to walking parents. A `go.mod` file is required, and the module path is read from it.
 
-Entrypoints are immediate directories under `cmd` that contain at least one `.go` file. Selecting `cmd/master` runs:
+Entrypoints are immediate directories under `cmd` that contain at least one `.go` file. Selecting `cmd/api` runs:
 
 ```sh
-go list -deps -json ./cmd/master
+go list -deps -json ./cmd/api
 ```
 
 The plugin keeps only packages where `pkg.Module.Path` equals the current module path. It collects `GoFiles`, `CgoFiles`, and, when enabled, `TestGoFiles` and `XTestGoFiles`. Generated files matching the configured header pattern are hidden from file, grep, and symbol pickers by default, but are retained in `current().generated_files` for diagnostics.
@@ -180,13 +180,12 @@ Dynamic plugin registration, reflection, build tags, and generated code can hide
 
 ## Manual Acceptance
 
-1. Open `~/coding/gns3util` in Neovim.
-2. Run `:GoMonoPick`, select `master`.
-3. Confirm `require("go_mono_repo").status()` returns `go:master`.
-4. Run `:GoMonoFiles`, search `job_handlers`, open the master handler.
-5. Run `:GoMonoFiles`, search `filestore_handlers`; it should not appear.
-6. Run `:GoMonoPick`, select `file-store`.
-7. Confirm `filestore_handlers` appears and master handlers are absent.
-8. Run `:GoMonoSymbols`, query `ListJobs`; only scoped symbols should show for the selected service.
-9. Run `:GoMonoHandlers`; confirm route rows are limited to the active scope and jump to handler implementations.
-10. Restart Neovim in the repo and confirm the last selected entrypoint restores from `stdpath("state")`.
+1. Open a Go monorepo that has multiple `cmd/*` entrypoints in Neovim.
+2. Run `:GoMonoPick`, select one entrypoint such as `api`.
+3. Confirm `require("go_mono_repo").status()` returns the selected scope, such as `go:api`.
+4. Run `:GoMonoFiles` and confirm files from unrelated entrypoints are hidden.
+5. Run `:GoMonoGrep` and confirm matches are limited to the selected scope.
+6. Run `:GoMonoSymbols` and confirm symbols are limited to the selected scope.
+7. Run `:GoMonoHandlers` and confirm route rows are limited to the active scope and jump to handler implementations.
+8. Run `:GoMonoPick`, select another entrypoint such as `worker`, and confirm scoped pickers update.
+9. Restart Neovim in the repo and confirm the last selected entrypoint restores from `stdpath("state")`.
