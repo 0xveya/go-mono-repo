@@ -244,7 +244,8 @@ function M.symbols(scope, symbols)
 			and snacks_pick({
 				title = "Go scope symbols",
 				items = items,
-				format = snacks_format_text,
+				format = "lsp_symbol",
+				workspace = true,
 				confirm = function(p, item)
 					if p and p.close then
 						p:close()
