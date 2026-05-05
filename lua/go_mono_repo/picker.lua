@@ -24,6 +24,33 @@ local function snacks_format_text(item)
 	return { { item_text(item), field = "text" } }
 end
 
+local method_hl = {
+	DELETE = "DiagnosticError",
+	GET = "DiagnosticInfo",
+	HANDLE = "DiagnosticHint",
+	HEAD = "DiagnosticHint",
+	OPTIONS = "DiagnosticHint",
+	PATCH = "DiagnosticWarn",
+	POST = "DiagnosticOk",
+	PUT = "DiagnosticWarn",
+}
+
+local function snacks_format_handler(item)
+	if not item.method then
+		return snacks_format_text(item)
+	end
+
+	return {
+		{ item.method, method_hl[item.method] or "Identifier", field = "method" },
+		{ " " },
+		{ item.path or "", "String", field = "path" },
+		{ " -> ", "Comment" },
+		{ item.handler or "", "Function", field = "handler" },
+		{ " " },
+		{ "[" .. (item.source or "") .. "]", "Comment", field = "source" },
+	}
+end
+
 local function symbol_kind(symbol)
 	return vim.lsp.protocol.SymbolKind[symbol.kind] or "Symbol"
 end
@@ -295,7 +322,7 @@ function M.handlers(items)
 						preview = "file",
 					})
 				end, items),
-				format = snacks_format_text,
+				format = snacks_format_handler,
 				confirm = function(p, item)
 					if p and p.close then
 						p:close()
