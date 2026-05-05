@@ -14,30 +14,24 @@ local function flatten(items, out)
 end
 
 function M.symbols(scope)
-	vim.ui.input({ prompt = "Go scope symbol: " }, function(query)
-		if not query or query == "" then
-			return
-		end
-		local params = { query = query }
-		local clients = vim.lsp.get_clients({ bufnr = 0 })
-		if #clients == 0 then
-			vim.notify("No active LSP clients", vim.log.levels.WARN, { title = "go_mono_repo" })
-			return
-		end
-		local remaining = #clients
-		local all = {}
-		for _, client in ipairs(clients) do
-			client.request("workspace/symbol", params, function(err, result)
-				remaining = remaining - 1
-				if not err and result then
-					vim.list_extend(all, flatten(result))
-				end
-				if remaining == 0 then
-					picker.symbols(scope, all)
-				end
-			end, 0)
-		end
-	end)
+	local clients = vim.lsp.get_clients({ bufnr = 0 })
+	if #clients == 0 then
+		vim.notify("No active LSP clients", vim.log.levels.WARN, { title = "go_mono_repo" })
+		return
+	end
+	local remaining = #clients
+	local all = {}
+	for _, client in ipairs(clients) do
+		client.request("workspace/symbol", { query = "" }, function(err, result)
+			remaining = remaining - 1
+			if not err and result then
+				vim.list_extend(all, flatten(result))
+			end
+			if remaining == 0 then
+				picker.symbols(scope, all)
+			end
+		end, 0)
+	end
 end
 
 return M

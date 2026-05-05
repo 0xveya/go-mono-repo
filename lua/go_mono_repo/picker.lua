@@ -24,6 +24,22 @@ local function snacks_format_text(item)
 	return { { item_text(item), field = "text" } }
 end
 
+local function symbol_kind(symbol)
+	return vim.lsp.protocol.SymbolKind[symbol.kind] or "Symbol"
+end
+
+local function symbol_location(symbol)
+	return symbol.location or symbol
+end
+
+local function symbol_pos(symbol)
+	local loc = symbol_location(symbol)
+	local range = loc.range or loc.selectionRange
+	if range and range.start then
+		return { range.start.line + 1, range.start.character }
+	end
+end
+
 function M.select_entry(entries, cb)
 	vim.ui.select(entries, {
 		prompt = "Go entrypoint",
@@ -49,7 +65,7 @@ end
 
 function M.files(scope)
 	local items = vim.tbl_map(function(path)
-		return { text = rel(scope.root, path), file = path }
+		return { text = rel(scope.root, path), file = path, preview = "file" }
 	end, scope.files)
 
 	for _, name in ipairs(prefer()) do
@@ -58,7 +74,7 @@ function M.files(scope)
 			and snacks_pick({
 				title = "Go scope files",
 				items = items,
-				format = snacks_format_text,
+				format = "file",
 				confirm = function(picker, item)
 					if picker and picker.close then
 						picker:close()
@@ -173,17 +189,86 @@ function M.symbols(scope, symbols)
 	local items = {}
 	local files = scope_set(scope)
 	for _, symbol in ipairs(symbols or {}) do
-		local loc = symbol.location or symbol
+		local loc = symbol_location(symbol)
 		local uri = loc.uri or loc.targetUri
 		local path = uri and vim.uri_to_fname(uri)
 		if path and files[vim.fs.normalize(path)] then
-			table.insert(items, { text = symbol.name .. " " .. rel(scope.root, path), symbol = symbol, file = path })
+			local pos = symbol_pos(symbol)
+			local kind = symbol_kind(symbol)
+			table.insert(items, {
+				text = kind .. " " .. symbol.name .. " " .. rel(scope.root, path),
+				name = symbol.name,
+				kind = kind,
+				symbol = symbol,
+				file = path,
+				pos = pos,
+				preview = "file",
+			})
+		end
+	end
+
+	local function open(item)
+		vim.lsp.util.show_document(symbol_location(item.symbol), "utf-8", { focus = true })
+	end
+
+	for _, name in ipairs(prefer()) do
+		if
+			name == "snacks"
+			and snacks_pick({
+				title = "Go scope symbols",
+				items = items,
+				format = snacks_format_text,
+				confirm = function(p, item)
+					if p and p.close then
+						p:close()
+					end
+					open(item)
+				end,
+			})
+		then
+			return
+		elseif name == "telescope" then
+			local ok, pickers = pcall(require, "telescope.pickers")
+			if ok then
+				local finders = require("telescope.finders")
+				local conf = require("telescope.config").values
+				pickers
+					.new({}, {
+						prompt_title = "Go scope symbols",
+						finder = finders.new_table({
+							results = items,
+							entry_maker = function(item)
+								return {
+									value = item,
+									display = item.text,
+									ordinal = item.text,
+									filename = item.file,
+									lnum = item.pos and item.pos[1],
+								}
+							end,
+						}),
+						sorter = conf.generic_sorter({}),
+						previewer = conf.grep_previewer({}),
+						attach_mappings = function(bufnr)
+							local actions = require("telescope.actions")
+							local action_state = require("telescope.actions.state")
+							actions.select_default:replace(function()
+								local selected = action_state.get_selected_entry()
+								actions.close(bufnr)
+								open(selected.value)
+							end)
+							return true
+						end,
+					})
+					:find()
+				return
+			end
 		end
 	end
 
 	vim.ui.select(items, { prompt = "Go scope symbols", format_item = item_text }, function(item)
 		if item then
-			vim.lsp.util.show_document(item.symbol.location or item.symbol, "utf-8", { focus = true })
+			open(item)
 		end
 	end)
 end
@@ -201,7 +286,15 @@ function M.handlers(items)
 			name == "snacks"
 			and snacks_pick({
 				title = "Go route handlers",
-				items = items,
+				items = vim.tbl_map(function(item)
+					local file = item.handler_file or item.file
+					local line = item.handler_line or item.line or 1
+					return vim.tbl_extend("force", item, {
+						file = file,
+						pos = { line, 0 },
+						preview = "file",
+					})
+				end, items),
 				format = snacks_format_text,
 				confirm = function(p, item)
 					if p and p.close then
@@ -223,10 +316,19 @@ function M.handlers(items)
 						finder = finders.new_table({
 							results = items,
 							entry_maker = function(item)
-								return { value = item, display = item.text, ordinal = item.text }
+								local file = item.handler_file or item.file
+								local line = item.handler_line or item.line or 1
+								return {
+									value = item,
+									display = item.text,
+									ordinal = item.text,
+									filename = file,
+									lnum = line,
+								}
 							end,
 						}),
 						sorter = conf.generic_sorter({}),
+						previewer = conf.grep_previewer({}),
 						attach_mappings = function(bufnr)
 							local actions = require("telescope.actions")
 							local action_state = require("telescope.actions.state")
