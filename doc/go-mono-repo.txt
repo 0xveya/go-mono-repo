@@ -1,0 +1,205 @@
+*go-mono-repo.txt*        Scope Go monorepo navigation by entrypoint
+
+==============================================================================
+CONTENTS                                             *go-mono-repo*
+
+  1. Introduction.............................|go-mono-repo-introduction|
+  2. Setup....................................|go-mono-repo-setup|
+  3. Commands.................................|go-mono-repo-commands|
+  4. Keymaps..................................|go-mono-repo-keymaps|
+  5. API......................................|go-mono-repo-api|
+  6. Router Handlers..........................|go-mono-repo-handlers|
+  7. Scope Computation........................|go-mono-repo-scope|
+
+==============================================================================
+INTRODUCTION                                  *go-mono-repo-introduction*
+
+go-mono-repo.nvim scopes editor navigation to the Go packages reachable from
+one selected cmd/* entrypoint in a monorepo.
+
+After selecting an entrypoint, file search, grep, workspace symbols, and route
+handler picking stay focused on the packages imported by that service.
+
+==============================================================================
+SETUP                                         *go-mono-repo-setup*
+
+Example lazy.nvim spec: >
+
+  {
+    "0xveya/go-mono-repo",
+    opts = {
+      persist = true,
+      override = {
+        enabled = true,
+        files = "<leader>ff",
+        grep = "<leader>fg",
+        symbols = "<leader>fs",
+        handlers = "<leader>fh",
+      },
+    },
+  }
+<
+
+Full setup: >
+
+  require("go_mono_repo").setup({
+    root_markers = { "go.work", "go.mod", ".git" },
+    entry_dir = "cmd",
+    include_tests = true,
+    exclude_generated = true,
+    generated_header_pattern = "^// Code generated .* DO NOT EDIT%.$",
+
+    state_file = vim.fn.stdpath("state") .. "/go_mono_repo/state.json",
+    persist = true,
+
+    picker = {
+      prefer = { "snacks", "telescope", "vim_ui" },
+    },
+
+    keymaps = {
+      pick_scope = nil,
+      pick_entrypoint = "<leader>ge",
+      clear_scope = "<leader>gE",
+      files = "<leader>gf",
+      grep = "<leader>gg",
+      symbols = "<leader>gs",
+      handlers = "<leader>gh",
+    },
+
+    override = {
+      enabled = false,
+      files = nil,
+      grep = nil,
+      symbols = nil,
+      handlers = nil,
+    },
+
+    notify = true,
+    debug = false,
+  })
+<
+
+No picker is required. The plugin tries Snacks first, then Telescope, then
+built-in vim.ui fallbacks.
+
+==============================================================================
+COMMANDS                                      *go-mono-repo-commands*
+
+                                                        *:GoMonoPick*
+:GoMonoPick          Discover cmd/*, pick an entrypoint, compute scope.
+
+                                                        *:GoMonoClear*
+:GoMonoClear         Reset current repo to unscoped mode.
+
+                                                        *:GoMonoRefresh*
+:GoMonoRefresh       Recompute the selected entrypoint scope.
+
+                                                        *:GoMonoFiles*
+:GoMonoFiles         Open the scoped file picker.
+
+                                                        *:GoMonoGrep*
+:GoMonoGrep          Open scoped live grep.
+
+                                                        *:GoMonoSymbols*
+:GoMonoSymbols       Open scoped symbols. Uses LSP document symbols per scoped
+                     file when available, with fallback symbol scanning.
+
+                                                        *:GoMonoHandlers*
+:GoMonoHandlers      Fuzzy pick Go router handlers in the active scope, or the
+                     whole module when unscoped.
+
+                                                        *:GoMonoStatus*
+:GoMonoStatus        Show current entrypoint and counts.
+
+                                                        *:GoMonoToggleOverrides*
+:GoMonoToggleOverrides
+                     Toggle configured override keymaps for this session.
+
+==============================================================================
+KEYMAPS                                       *go-mono-repo-keymaps*
+
+Default keymaps: >
+
+  {
+    pick_entrypoint = "<leader>ge",
+    clear_scope = "<leader>gE",
+    files = "<leader>gf",
+    grep = "<leader>gg",
+    symbols = "<leader>gs",
+    handlers = "<leader>gh",
+  }
+<
+
+Set keymaps.pick_scope to add an alias for the entrypoint scope picker: >
+
+  require("go_mono_repo").setup({
+    keymaps = {
+      pick_scope = "<leader>ngl",
+    },
+  })
+<
+
+When override.enabled is true, configured override keys call scoped commands
+while a scope exists and fall back to normal picker behavior while unscoped.
+
+==============================================================================
+API                                           *go-mono-repo-api*
+
+Lua API: >
+
+  local gomono = require("go_mono_repo")
+
+  gomono.setup(opts)
+  gomono.pick_entrypoint()
+  gomono.clear_scope()
+  gomono.refresh_scope()
+  gomono.files()
+  gomono.grep()
+  gomono.symbols()
+  gomono.handlers()
+  gomono.current()
+  gomono.status()
+<
+
+status() returns "go:all" when no entrypoint is selected, or values such as
+"go:master" and "go:file-store".
+
+==============================================================================
+ROUTER HANDLERS                               *go-mono-repo-handlers*
+
+GoMonoHandlers scans scoped files when an entrypoint is active, or the whole
+module when unscoped. It recognizes common Chi registrations such as: >
+
+  r.Route("/api/v1", func(r chi.Router) {
+    r.Get("/healthz", commonhandlers.HandleHealthz)
+    r.Post("/jobs/{job_name}/run", master.RunJob)
+  })
+<
+
+Picker rows include the HTTP method, joined route path, handler expression, and
+registration file. Snacks rows are highlighted by method, path, handler, and
+source. When the handler function can be resolved, selecting the row jumps to
+the handler implementation; otherwise it jumps to the route registration.
+
+==============================================================================
+SCOPE COMPUTATION                             *go-mono-repo-scope*
+
+Root detection starts from the current buffer and looks for go.work, go.mod, or
+.git. A go.mod file is required, and the module path is read from it.
+
+Entrypoints are immediate directories under cmd that contain at least one Go
+file. Selecting cmd/master runs: >
+
+  go list -deps -json ./cmd/master
+<
+
+The plugin keeps packages where pkg.Module.Path equals the current module path.
+Generated files matching generated_header_pattern are hidden from file, grep,
+and symbol pickers by default.
+
+Selections are persisted per repository in: >
+
+  stdpath("state")/go_mono_repo/state.json
+<
+
+vim:tw=78:ts=8:ft=help:norl:
