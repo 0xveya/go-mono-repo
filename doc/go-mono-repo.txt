@@ -155,8 +155,11 @@ while a scope exists and fall back to normal picker behavior while unscoped.
 
 GoMonoNarrow opens a second-level picker for the active entrypoint. The first
 detector finds Cobra command groups and narrows the file set to the group
-constructor and local packages imported by that group. Status strings include
-the narrow label, for example "go:cli/auth" or "go:cli/ctl".
+constructor and local packages imported by that group. The picker uses the
+configured Snacks/Telescope preference order, previews the command-group
+constructor, and falls back to vim.ui.select when no picker is available.
+Status strings include the narrow label, for example "go:cli/auth" or
+"go:cli/ctl".
 
 ==============================================================================
 API                                           *go-mono-repo-api*

@@ -139,6 +139,7 @@ function M.discover(scope)
 						name = label,
 						alias = alias,
 						constructor = block.name,
+						root = scope.root,
 						file = file,
 						line = block.line,
 						text = ("%s [%s:%d]"):format(display, rel(scope.root, file), block.line),

@@ -129,7 +129,7 @@ require("go_mono_repo").setup({
 
 For example, set `keymaps.pick_scope = "<leader>ngl"` to open the scope picker with `<leader>ngl`.
 
-Set `keymaps.narrow` to open a second-level picker for narrowing the current entrypoint scope. For example, after selecting a CLI entrypoint, `:GoMonoNarrow` can discover Cobra command groups such as `auth`, `project`, or an alias like `ctl -> cluster-control`. Scoped files, grep, symbols, and handlers then use the narrowed file set until you run `:GoMonoClearNarrow`.
+Set `keymaps.narrow` to open a second-level picker for narrowing the current entrypoint scope. For example, after selecting a CLI entrypoint, `:GoMonoNarrow` can discover Cobra command groups such as `auth`, `project`, or an alias like `ctl -> cluster-control`. The picker uses the configured Snacks/Telescope preference order, previews the command-group constructor, and falls back to `vim.ui.select` when no picker is available. Scoped files, grep, symbols, and handlers then use the narrowed file set until you run `:GoMonoClearNarrow`.
 
 ## Override Keymaps
 

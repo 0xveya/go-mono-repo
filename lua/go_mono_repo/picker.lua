@@ -51,6 +51,16 @@ local function snacks_format_handler(item)
 	}
 end
 
+local function snacks_format_narrow(item)
+	return {
+		{ item.status or item.label or item.name, "Function", field = "name" },
+		{ " " },
+		{ item.alias and ("-> " .. item.name .. " ") or "", "Comment" },
+		{ "(" .. #(item.files or {}) .. " files) ", "Number" },
+		{ item.file and rel(item.root or vim.fn.getcwd(), item.file) or "", "Comment", field = "file" },
+	}
+end
+
 local function symbol_kind(symbol)
 	return vim.lsp.protocol.SymbolKind[symbol.kind] or "Symbol"
 end
@@ -77,12 +87,82 @@ function M.select_entry(entries, cb)
 end
 
 function M.select_narrow(items, cb)
+	local function apply(item)
+		if item then
+			cb(item)
+		else
+			cb(nil)
+		end
+	end
+
+	local picker_items = vim.tbl_map(function(item)
+		return vim.tbl_extend("force", item, {
+			pos = { item.line or 1, 0 },
+			preview = "file",
+		})
+	end, items)
+
+	for _, name in ipairs(prefer()) do
+		if
+			name == "snacks"
+			and snacks_pick({
+				title = "Go narrow scope",
+				items = picker_items,
+				format = snacks_format_narrow,
+				confirm = function(picker, item)
+					if picker and picker.close then
+						picker:close()
+					end
+					apply(item)
+				end,
+			})
+		then
+			return
+		elseif name == "telescope" then
+			local ok, pickers = pcall(require, "telescope.pickers")
+			if ok then
+				local finders = require("telescope.finders")
+				local conf = require("telescope.config").values
+				pickers
+					.new({}, {
+						prompt_title = "Go narrow scope",
+						finder = finders.new_table({
+							results = picker_items,
+							entry_maker = function(item)
+								return {
+									value = item,
+									display = item.text,
+									ordinal = item.text,
+									filename = item.file,
+									lnum = item.line or 1,
+								}
+							end,
+						}),
+						sorter = conf.generic_sorter({}),
+						previewer = conf.grep_previewer({}),
+						attach_mappings = function(bufnr)
+							local actions = require("telescope.actions")
+							local action_state = require("telescope.actions.state")
+							actions.select_default:replace(function()
+								local selected = action_state.get_selected_entry()
+								actions.close(bufnr)
+								apply(selected.value)
+							end)
+							return true
+						end,
+					})
+					:find()
+				return
+			end
+		end
+	end
+
 	vim.ui.select(items, {
 		prompt = "Go narrow scope",
 		format_item = function(item)
 			return item.text or item.label
 		end,
-	}, cb)
+	}, apply)
 end
 
 local function snacks_pick(opts)
