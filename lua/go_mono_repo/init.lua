@@ -76,12 +76,13 @@ local function setup_commands()
 			return
 		end
 		notify(
-			("Go scope: %s%s\nroot: %s\npackages: %d\nfiles: %d\ngenerated hidden: %d"):format(
+			("Go scope: %s%s\nroot: %s\npackages: %d\nfiles: %d\ncompanion files: %d\ngenerated hidden: %d"):format(
 				current.label,
 				current.narrow and ("/" .. (current.narrow.status or current.narrow.label)) or "",
 				current.root,
 				#(current.packages or {}),
 				#(current.files or {}),
+				#(current.companion_files or {}),
 				#(current.generated_files or {})
 			)
 		)
@@ -124,7 +125,7 @@ function M.pick_entrypoint()
 	end
 	local entries = go.discover_entrypoints(root)
 	if #entries == 0 then
-		notify("No Go cmd entrypoints found under " .. root .. "/" .. config.options.entry_dir, vim.log.levels.WARN)
+		notify("No Go entrypoints found under " .. root, vim.log.levels.WARN)
 		return
 	end
 	picker.select_entry(entries, function(item)

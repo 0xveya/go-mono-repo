@@ -41,6 +41,31 @@ local function parse_imports(lines)
 	return imports
 end
 
+local function import_aliases(lines)
+	local aliases = {}
+	local in_block = false
+	for _, line in ipairs(lines) do
+		if line:match("^%s*import%s*%(") then
+			in_block = true
+		elseif in_block and line:match("^%s*%)") then
+			in_block = false
+		else
+			local alias, path
+			if in_block then
+				alias, path = line:match('^%s*([%w_]+)%s+"([^"]+)"')
+				path = path or line:match('^%s*"([^"]+)"')
+			else
+				alias, path = line:match('^%s*import%s+([%w_]+)%s+"([^"]+)"')
+				path = path or line:match('^%s*import%s+"([^"]+)"')
+			end
+			if path then
+				aliases[alias or path:match("([^/]+)$")] = path
+			end
+		end
+	end
+	return aliases
+end
+
 local function file_map(files)
 	local map = {}
 	local by_dir = {}
@@ -65,7 +90,9 @@ local function collect_related_files(scope, start_file)
 	local files = scope.all_files or scope.files or {}
 	local _, by_dir = file_map(files)
 	local included = {}
-	local queue = { { file = vim.fs.normalize(start_file) } }
+	-- A command constructor is only one file in its package. Start with the
+	-- complete package so sibling command files are not accidentally omitted.
+	local queue = { { dir = vim.fs.dirname(vim.fs.normalize(start_file)) } }
 	local seen_dir = {}
 	local seen_file = {}
 
@@ -105,7 +132,7 @@ local function find_function_blocks(lines)
 	local blocks = {}
 	for lnum, line in ipairs(lines) do
 		local name = line:match("^func%s+([%w_]+)%s*%(")
-		if name and name:match("CmdGroup$") then
+		if name then
 			local block = {}
 			for i = lnum, #lines do
 				if i > lnum and lines[i]:match("^func%s+") then
@@ -119,15 +146,67 @@ local function find_function_blocks(lines)
 	return blocks
 end
 
+local function find_constructor(lines, name)
+	for _, block in ipairs(find_function_blocks(lines)) do
+		if block.name == name then
+			return block
+		end
+	end
+end
+
+local function registered_commands(scope)
+	local items = {}
+	local entry_dir = vim.fs.normalize(scope.root .. "/" .. scope.entry:gsub("^%./", ""))
+	local _, by_dir = file_map(scope.all_files or scope.files or {})
+
+	for _, parent_file in ipairs(by_dir[entry_dir] or {}) do
+		local parent_lines = readfile(parent_file)
+		local aliases = import_aliases(parent_lines)
+		local text = table.concat(parent_lines, "\n")
+		for args in text:gmatch("AddCommand%s*(%b())") do
+			for qualifier, constructor in args:gmatch("([%w_]+)%.([%w_]+)%s*%(") do
+				local import_path = aliases[qualifier]
+				local dir = import_path and import_dir(scope, import_path)
+				for _, file in ipairs((dir and by_dir[dir]) or {}) do
+					local block = find_constructor(readfile(file), constructor)
+					if block and block.text:find("cobra%.Command") then
+						local use = block.text:match('Use:%s*"([^"]+)"')
+						local label = first_word(use) or qualifier
+						table.insert(items, {
+							label = label,
+							status = label,
+							name = label,
+							constructor = constructor,
+							root = scope.root,
+							file = file,
+							line = block.line,
+							text = ("%s [%s:%d]"):format(label, rel(scope.root, file), block.line),
+							files = collect_related_files(scope, file),
+						})
+						break
+					end
+				end
+			end
+		end
+	end
+	return items
+end
+
 function M.discover(scope)
 	local items = {}
 	local seen = {}
+	for _, item in ipairs(registered_commands(scope)) do
+		local key = item.file .. "\n" .. item.constructor
+		seen[key] = true
+		table.insert(items, item)
+	end
 	for _, file in ipairs(scope.all_files or scope.files or {}) do
 		for _, block in ipairs(find_function_blocks(readfile(file))) do
-			if block.text:find("cobra%.Command") then
+			if block.name:match("CmdGroup$") and block.text:find("cobra%.Command") then
 				local use = block.text:match('Use:%s*"([^"]+)"')
 				local label = first_word(use) or block.name:gsub("^New", ""):gsub("CmdGroup$", "")
-				local aliases = block.text:match("Aliases:%s*%[%]string%s*(%b{})") or block.text:match("Aliases:%s*(%b{})")
+				local aliases = block.text:match("Aliases:%s*%[%]string%s*(%b{})")
+					or block.text:match("Aliases:%s*(%b{})")
 				local alias = aliases and aliases:match('"([^"]+)"')
 				local display = alias and (alias .. " -> " .. label) or label
 				local key = file .. "\n" .. block.name
@@ -170,6 +249,15 @@ function M.apply(scope, item)
 		line = item.line,
 	}
 	scope.files = vim.deepcopy(item.files or {})
+	local companion_scope = vim.tbl_extend("force", {}, scope, {
+		companion_key = item.status or item.name or item.label,
+		companion_base = vim.fs.dirname(item.file),
+	})
+	local companion_files, companion_roots = require("go_mono_repo.companion").collect(companion_scope)
+	scope.companion_files = companion_files
+	scope.companion_roots = companion_roots
+	vim.list_extend(scope.files, companion_files)
+	table.sort(scope.files)
 	state.persist_selection(scope.root, scope)
 end
 
@@ -178,6 +266,8 @@ function M.clear(scope)
 		scope.files = vim.deepcopy(scope.all_files)
 	end
 	scope.narrow = nil
+	scope.companion_files = vim.deepcopy(scope.all_companion_files or {})
+	scope.companion_roots = vim.deepcopy(scope.all_companion_roots or {})
 	state.persist_selection(scope.root, scope)
 end
 

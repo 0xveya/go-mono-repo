@@ -89,6 +89,8 @@ function M.compute(root, entry, opts)
 		scope.label = discovered.label
 	end
 	scope.all_files = vim.deepcopy(scope.files)
+	scope.all_companion_files = vim.deepcopy(scope.companion_files or {})
+	scope.all_companion_roots = vim.deepcopy(scope.companion_roots or {})
 	M.set(scope)
 	if previous and previous.narrow then
 		local narrow = require("go_mono_repo.narrow")

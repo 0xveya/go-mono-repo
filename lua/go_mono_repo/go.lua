@@ -34,25 +34,50 @@ end
 function M.discover_entrypoints(root)
 	local dir = root .. "/" .. config.options.entry_dir
 	local entries = {}
-	if not is_dir(dir) then
-		return entries
-	end
-	local fd = uv.fs_scandir(dir)
-	if not fd then
-		return entries
-	end
-	while true do
-		local name, typ = uv.fs_scandir_next(fd)
-		if not name then
-			break
+	if is_dir(dir) then
+		local fd = uv.fs_scandir(dir)
+		if fd then
+			while true do
+				local name, typ = uv.fs_scandir_next(fd)
+				if not name then
+					break
+				end
+				local full = dir .. "/" .. name
+				if typ == "directory" and has_go_file(full) then
+					table.insert(entries, {
+						label = name,
+						entry = "./" .. config.options.entry_dir .. "/" .. name,
+						path = full,
+					})
+				end
+			end
 		end
-		local full = dir .. "/" .. name
-		if typ == "directory" and has_go_file(full) then
-			table.insert(entries, {
-				label = name,
-				entry = "./" .. config.options.entry_dir .. "/" .. name,
-				path = full,
-			})
+	end
+
+	local entry_opts = config.options.entrypoints or {}
+	if (#entries == 0 and entry_opts.fallback_main_packages) or entry_opts.include_main_packages then
+		local result = vim.system(
+			{ "go", "list", "-e", "-f", '{{if eq .Name "main"}}{{.Dir}}|{{.ImportPath}}{{end}}', "./..." },
+			{
+				cwd = root,
+				text = true,
+			}
+		):wait()
+		local seen = {}
+		for _, item in ipairs(entries) do
+			seen[item.path] = true
+		end
+		for line in (result.stdout or ""):gmatch("[^\n]+") do
+			local path, import_path = line:match("^(.-)|(.+)$")
+			if path and not seen[path] then
+				local relative = path == root and "." or path:sub(#root + 2)
+				table.insert(entries, {
+					label = relative == "." and vim.fs.basename(root) or relative,
+					entry = relative == "." and "." or "./" .. relative,
+					path = path,
+					import_path = import_path,
+				})
+			end
 		end
 	end
 	table.sort(entries, function(a, b)
@@ -184,7 +209,13 @@ function M.compute_scope(root, entry)
 	raw.generated_files = vim.tbl_keys(raw.generated_files)
 	table.sort(raw.files)
 	table.sort(raw.generated_files)
-	raw.import_path = raw.import_path or (module_path .. "/" .. entry:gsub("^%./", ""))
+	raw.import_path = raw.import_path
+		or (entry == "." and module_path or (module_path .. "/" .. entry:gsub("^%./", "")))
+	local companion_files, companion_roots = require("go_mono_repo.companion").collect(raw)
+	raw.companion_files = companion_files
+	raw.companion_roots = companion_roots
+	vim.list_extend(raw.files, companion_files)
+	table.sort(raw.files)
 	return raw
 end
 

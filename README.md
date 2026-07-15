@@ -90,9 +90,22 @@ Default keymaps:
 require("go_mono_repo").setup({
   root_markers = { "go.work", "go.mod", ".git" },
   entry_dir = "cmd",
+  entrypoints = {
+    fallback_main_packages = true,
+    include_main_packages = false,
+  },
   include_tests = true,
   exclude_generated = true,
   generated_header_pattern = "^// Code generated .* DO NOT EDIT%.$",
+
+  companions = {
+    auto_svelte = true,
+    paths = {
+      -- ["./cmd/api"] = { "frontend", "migrations", "deploy/api" },
+      -- ["*"] = { "shared/openapi" },
+    },
+    exclude_dirs = { ".git", ".svelte-kit", "node_modules", "build", "dist", "coverage" },
+  },
 
   state_file = vim.fn.stdpath("state") .. "/go_mono_repo/state.json",
   persist = true,
@@ -129,7 +142,24 @@ require("go_mono_repo").setup({
 
 For example, set `keymaps.pick_scope = "<leader>ngl"` to open the scope picker with `<leader>ngl`.
 
-Set `keymaps.narrow` to open a second-level picker for narrowing the current entrypoint scope. For example, after selecting a CLI entrypoint, `:GoMonoNarrow` can discover Cobra command groups such as `auth`, `project`, or an alias like `ctl -> cluster-control`. The picker uses the configured Snacks/Telescope preference order, previews the command-group constructor, and falls back to `vim.ui.select` when no picker is available. Scoped files, grep, symbols, and handlers then use the narrowed file set until you run `:GoMonoClearNarrow`.
+Set `keymaps.narrow` to open a second-level picker for narrowing the current entrypoint scope. It discovers both Cobra command-group constructors and top-level commands registered by the entrypoint with `AddCommand(...)`. This supports multicall binaries such as `cmd/tethux`, where `virt.NewRootCmd()` and `bridge.NewRootCmd()` should become independent scopes. The selected scope includes the command's complete Go package (including sibling files) and its internal dependency closure. The picker uses the configured Snacks/Telescope preference order, previews the command constructor, and falls back to `vim.ui.select` when no picker is available. Scoped files, grep, symbols, and handlers then use the narrowed file set until you run `:GoMonoClearNarrow`.
+
+### Frontends and Companion Files
+
+When an entrypoint contains a Svelte project, its source and configuration files are included automatically while generated and dependency directories such as `.svelte-kit`, `build`, and `node_modules` remain hidden. Repositories without `cmd/*` entrypoints fall back to discovering local Go `main` packages, so a root Go server with a sibling Svelte directory works without configuration.
+
+Use `companions.paths` to associate other non-Go trees with an entrypoint. Keys may be an entry such as `./cmd/api`, its picker label, or `*` for files shared by every scope. Narrow scopes also accept the narrow label or a qualified key such as `tethux/virt` or `./cmd/tethux/virt`. This is useful for migrations, templates, OpenAPI definitions, deployment manifests, and frontends that do not live below their Go entrypoint. Set `entrypoints.include_main_packages = true` when tool binaries outside `cmd/*` should also appear in the entrypoint picker.
+
+For example, a multicall project can keep operational files aligned with each component:
+
+```lua
+companions = {
+  paths = {
+    ["tethux/virt"] = { "nix/modules", "nix/hosts", "cmd/virt/README.md" },
+    ["tethux/bridge"] = { "scripts", "cmd/bridge/README.md" },
+  },
+},
+```
 
 ## Override Keymaps
 

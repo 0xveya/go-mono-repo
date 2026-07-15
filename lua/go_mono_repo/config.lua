@@ -3,9 +3,21 @@ local M = {}
 M.defaults = {
 	root_markers = { "go.work", "go.mod", ".git" },
 	entry_dir = "cmd",
+	entrypoints = {
+		-- Repositories without cmd/* fall back to all local package main targets.
+		fallback_main_packages = true,
+		-- Enable this to also show tools/* and other main packages beside cmd/*.
+		include_main_packages = false,
+	},
 	include_tests = true,
 	exclude_generated = true,
 	generated_header_pattern = "^// Code generated .* DO NOT EDIT%.$",
+	companions = {
+		auto_svelte = true,
+		-- Extra files or directories keyed by entry, label, or "*".
+		paths = {},
+		exclude_dirs = { ".git", ".svelte-kit", "node_modules", "build", "dist", "coverage" },
+	},
 
 	state_file = vim.fn.stdpath("state") .. "/go_mono_repo/state.json",
 	persist = true,
