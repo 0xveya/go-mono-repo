@@ -18,6 +18,7 @@ M.defaults = {
 		paths = {},
 		exclude_dirs = { ".git", ".svelte-kit", "node_modules", "build", "dist", "coverage" },
 	},
+	presets = {},
 
 	state_file = vim.fn.stdpath("state") .. "/go_mono_repo/state.json",
 	persist = true,
@@ -29,6 +30,7 @@ M.defaults = {
 	keymaps = {
 		pick_scope = nil,
 		pick_entrypoint = "<leader>ge",
+		preset = nil,
 		narrow = nil,
 		clear_narrow = nil,
 		clear_scope = "<leader>gE",

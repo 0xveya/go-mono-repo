@@ -61,6 +61,7 @@ end
 
 local function setup_commands()
 	vim.api.nvim_create_user_command("GoMonoPick", M.pick_entrypoint, { force = true })
+	vim.api.nvim_create_user_command("GoMonoPreset", M.pick_preset, { force = true })
 	vim.api.nvim_create_user_command("GoMonoNarrow", M.narrow_scope, { force = true })
 	vim.api.nvim_create_user_command("GoMonoClearNarrow", M.clear_narrow, { force = true })
 	vim.api.nvim_create_user_command("GoMonoClear", M.clear_scope, { force = true })
@@ -102,6 +103,7 @@ function M.setup(opts)
 	local km = config.options.keymaps or {}
 	map(km.pick_scope, M.pick_entrypoint, "Pick Go scope")
 	map(km.pick_entrypoint, M.pick_entrypoint, "Pick Go entrypoint")
+	map(km.preset, M.pick_preset, "Pick Go scope preset")
 	map(km.narrow, M.narrow_scope, "Narrow Go scope")
 	map(km.clear_narrow, M.clear_narrow, "Clear Go narrow scope")
 	map(km.clear_scope, M.clear_scope, "Clear Go scope")
@@ -115,6 +117,50 @@ function M.setup(opts)
 	if root then
 		scope.restore(root)
 	end
+end
+
+function M.pick_preset()
+	local root, err = require("go_mono_repo.root").find()
+	if not root then
+		notify(err, vim.log.levels.WARN)
+		return
+	end
+	local presets = vim.tbl_filter(function(item)
+		return not item.root or item.root == root or root:match(item.root)
+	end, config.options.presets or {})
+	if #presets == 0 then
+		notify("No Go scope presets configured for " .. root, vim.log.levels.WARN)
+		return
+	end
+	picker.select_preset(presets, function(item)
+		if not item then
+			return
+		end
+		local current, compute_err = scope.compute(root, item.entry, { force = true })
+		if not current then
+			notify(compute_err, vim.log.levels.ERROR)
+			return
+		end
+		if item.narrow then
+			local match
+			for _, candidate in ipairs(narrow.discover(current)) do
+				if
+					candidate.label == item.narrow
+					or candidate.name == item.narrow
+					or candidate.constructor == item.narrow
+				then
+					match = candidate
+					break
+				end
+			end
+			if not match then
+				notify(("Preset %s: narrow scope %s not found"):format(item.label, item.narrow), vim.log.levels.ERROR)
+				return
+			end
+			narrow.apply(current, match)
+		end
+		notify(("Go preset: %s, %d files"):format(item.label, #(current.files or {})))
+	end)
 end
 
 function M.pick_entrypoint()

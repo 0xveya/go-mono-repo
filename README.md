@@ -33,6 +33,7 @@ local gomono = require("go_mono_repo")
 
 gomono.setup(opts)
 gomono.pick_entrypoint()
+gomono.pick_preset()
 gomono.narrow_scope()
 gomono.clear_narrow()
 gomono.clear_scope()
@@ -58,6 +59,7 @@ It returns `go:all` when no entrypoint is selected, or values such as `go:api`, 
 | Command | Behavior |
 | --- | --- |
 | `:GoMonoPick` | Discover `cmd/*`, pick an entrypoint, compute scope |
+| `:GoMonoPreset` | Pick a configured entrypoint/narrow combination in one action |
 | `:GoMonoNarrow` | Narrow the current entrypoint scope to a discovered command group |
 | `:GoMonoClearNarrow` | Clear the command-group narrow filter |
 | `:GoMonoClear` | Reset current repo to unscoped mode |
@@ -107,6 +109,11 @@ require("go_mono_repo").setup({
     exclude_dirs = { ".git", ".svelte-kit", "node_modules", "build", "dist", "coverage" },
   },
 
+  presets = {
+    -- { label = "API", entry = "./cmd/api" },
+    -- { label = "Multicall · worker", entry = "./cmd/app", narrow = "worker" },
+  },
+
   state_file = vim.fn.stdpath("state") .. "/go_mono_repo/state.json",
   persist = true,
 
@@ -118,6 +125,7 @@ require("go_mono_repo").setup({
     -- Alias for pick_entrypoint; useful if you prefer naming this by the scope action.
     pick_scope = nil,
     pick_entrypoint = "<leader>ge",
+    preset = nil,
     narrow = nil,
     clear_narrow = nil,
     clear_scope = "<leader>gE",
@@ -142,7 +150,7 @@ require("go_mono_repo").setup({
 
 For example, set `keymaps.pick_scope = "<leader>ngl"` to open the scope picker with `<leader>ngl`.
 
-Set `keymaps.narrow` to open a second-level picker for narrowing the current entrypoint scope. It discovers both Cobra command-group constructors and top-level commands registered by the entrypoint with `AddCommand(...)`. This supports multicall binaries such as `cmd/tethux`, where `virt.NewRootCmd()` and `bridge.NewRootCmd()` should become independent scopes. The selected scope includes the command's complete Go package (including sibling files) and its internal dependency closure. The picker uses the configured Snacks/Telescope preference order, previews the command constructor, and falls back to `vim.ui.select` when no picker is available. Scoped files, grep, symbols, and handlers then use the narrowed file set until you run `:GoMonoClearNarrow`.
+Set `keymaps.narrow` to open a second-level picker for narrowing the current entrypoint scope. It discovers both Cobra command-group constructors and top-level commands registered by the entrypoint with `AddCommand(...)`. This supports multicall binaries such as [`tethux`](https://github.com/0xveya/tethux), where `virt.NewRootCmd()` and `bridge.NewRootCmd()` become independent scopes. The selected scope includes the command's complete Go package (including sibling files) and its internal dependency closure. The picker uses the configured Snacks/Telescope preference order, previews the command constructor, and falls back to `vim.ui.select` when no picker is available. Scoped files, grep, symbols, and handlers then use the narrowed file set until you run `:GoMonoClearNarrow`.
 
 ### Frontends and Companion Files
 
@@ -159,7 +167,14 @@ companions = {
     ["tethux/bridge"] = { "scripts", "cmd/bridge/README.md" },
   },
 },
+
+presets = {
+  { label = "Tethux · virt", entry = "./cmd/tethux", narrow = "virt" },
+  { label = "Tethux · CI viewer", entry = "./tools/ci-results" },
+},
 ```
+
+The CI viewer preset scopes both the Go server and its nested Svelte frontend because companion discovery runs relative to the selected tool entrypoint. Preset selections use the normal persisted entrypoint and narrow state, so they survive a Neovim restart.
 
 ## Override Keymaps
 
