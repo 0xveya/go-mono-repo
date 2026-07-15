@@ -188,7 +188,8 @@ function M.select_narrow(items, cb)
 	}, apply)
 end
 
-function M.files(scope)
+function M.files(scope, opts)
+	opts = opts or {}
 	local items = vim.tbl_map(function(path)
 		return { text = rel(scope.root, path), file = path, preview = "file" }
 	end, scope.files)
@@ -197,7 +198,7 @@ function M.files(scope)
 		if
 			name == "snacks"
 			and snacks_pick({
-				title = "Go scope files",
+				title = opts.title or "Go scope files",
 				items = items,
 				format = "file",
 				confirm = function(picker, item)
@@ -216,7 +217,7 @@ function M.files(scope)
 				local conf = require("telescope.config").values
 				pickers
 					.new({}, {
-						prompt_title = "Go scope files",
+						prompt_title = opts.title or "Go scope files",
 						finder = finders.new_table({
 							results = items,
 							entry_maker = function(item)
@@ -241,7 +242,7 @@ function M.files(scope)
 		end
 	end
 
-	vim.ui.select(items, { prompt = "Go scope files", format_item = item_text }, function(item)
+	vim.ui.select(items, { prompt = opts.title or "Go scope files", format_item = item_text }, function(item)
 		if item then
 			vim.cmd.edit(vim.fn.fnameescape(item.file))
 		end

@@ -34,6 +34,7 @@ local gomono = require("go_mono_repo")
 gomono.setup(opts)
 gomono.pick_entrypoint()
 gomono.pick_preset()
+gomono.frontend()
 gomono.narrow_scope()
 gomono.clear_narrow()
 gomono.clear_scope()
@@ -60,6 +61,7 @@ It returns `go:all` when no entrypoint is selected, or values such as `go:api`, 
 | --- | --- |
 | `:GoMonoPick` | Discover `cmd/*`, pick an entrypoint, compute scope |
 | `:GoMonoPreset` | Pick a configured entrypoint/narrow combination in one action |
+| `:GoMonoFrontend` | Pick only Svelte files attached to the active scope |
 | `:GoMonoNarrow` | Narrow the current entrypoint scope to a discovered command group |
 | `:GoMonoClearNarrow` | Clear the command-group narrow filter |
 | `:GoMonoClear` | Reset current repo to unscoped mode |
@@ -126,6 +128,7 @@ require("go_mono_repo").setup({
     pick_scope = nil,
     pick_entrypoint = "<leader>ge",
     preset = nil,
+    frontend = nil,
     narrow = nil,
     clear_narrow = nil,
     clear_scope = "<leader>gE",

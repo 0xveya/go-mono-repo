@@ -62,6 +62,7 @@ end
 local function setup_commands()
 	vim.api.nvim_create_user_command("GoMonoPick", M.pick_entrypoint, { force = true })
 	vim.api.nvim_create_user_command("GoMonoPreset", M.pick_preset, { force = true })
+	vim.api.nvim_create_user_command("GoMonoFrontend", M.frontend, { force = true })
 	vim.api.nvim_create_user_command("GoMonoNarrow", M.narrow_scope, { force = true })
 	vim.api.nvim_create_user_command("GoMonoClearNarrow", M.clear_narrow, { force = true })
 	vim.api.nvim_create_user_command("GoMonoClear", M.clear_scope, { force = true })
@@ -104,6 +105,7 @@ function M.setup(opts)
 	map(km.pick_scope, M.pick_entrypoint, "Pick Go scope")
 	map(km.pick_entrypoint, M.pick_entrypoint, "Pick Go entrypoint")
 	map(km.preset, M.pick_preset, "Pick Go scope preset")
+	map(km.frontend, M.frontend, "Active scope frontend files")
 	map(km.narrow, M.narrow_scope, "Narrow Go scope")
 	map(km.clear_narrow, M.clear_narrow, "Clear Go narrow scope")
 	map(km.clear_scope, M.clear_scope, "Clear Go scope")
@@ -229,6 +231,20 @@ end
 
 function M.files()
 	scoped_or_pick(picker.files)
+end
+
+function M.frontend()
+	local current, err = scope.ensure()
+	if not current then
+		notify(err .. "; run :GoMonoPick or :GoMonoPreset", vim.log.levels.WARN)
+		return
+	end
+	local files = require("go_mono_repo.companion").frontend_files(current)
+	if #files == 0 then
+		notify("No Svelte frontend in the active scope", vim.log.levels.WARN)
+		return
+	end
+	picker.files({ root = current.root, files = files }, { title = "Go scope Svelte frontend" })
 end
 
 function M.grep()

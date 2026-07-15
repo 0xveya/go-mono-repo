@@ -31,6 +31,7 @@ M.defaults = {
 		pick_scope = nil,
 		pick_entrypoint = "<leader>ge",
 		preset = nil,
+		frontend = nil,
 		narrow = nil,
 		clear_narrow = nil,
 		clear_scope = "<leader>gE",

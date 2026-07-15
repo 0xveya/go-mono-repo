@@ -109,4 +109,16 @@ function M.collect(scope)
 	return result, root_list
 end
 
+function M.frontend_files(scope)
+	local files = {}
+	for _, root in ipairs(scope.companion_roots or {}) do
+		if is_svelte(root) then
+			walk(root, files)
+		end
+	end
+	local result = vim.tbl_keys(files)
+	table.sort(result)
+	return result
+end
+
 return M
